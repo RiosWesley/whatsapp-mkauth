@@ -1,4 +1,4 @@
-## Colbranca Zap API (whatsapp-web.js)
+## Cobranca Zap API (whatsapp-web.js)
 
 API em Node.js/Express usando `whatsapp-web.js` para envio de mensagens, imagens e documentos, com autenticação opcional compatível com MK-AUTH e logs JSONL.
 
