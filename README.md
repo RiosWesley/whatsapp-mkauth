@@ -4,8 +4,8 @@ API em Node.js/Express usando `whatsapp-web.js` para envio de mensagens, imagens
 
 ### Requisitos
 - Node.js 18+ (recomendado 20.x)
-- Chromium instalado no sistema
-- Dependências do Chromium (Puppeteer) disponíveis
+- Chromium ou Google Chrome instalado
+- Dependências do Chromium/Chrome (Puppeteer) disponíveis
 
 ### Instalação no Debian
 ```bash
@@ -49,7 +49,7 @@ Persistência de sessão do WhatsApp: `./.wwebjs_auth` (não apague para evitar 
 ### Execução
 Primeiro start (para ler o QR):
 ```bash
-PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium npm start
+npm start
 ```
 Um QR será exibido no console. Escaneie com o WhatsApp em Aparelhos Conectados.
 
@@ -62,7 +62,7 @@ npm run dev
 PM2 (recomendado):
 ```bash
 npm -g i pm2
-PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium pm2 start npm --name whatsapp-mkauth -- start
+pm2 start npm --name whatsapp-mkauth -- start
 pm2 save
 pm2 startup systemd -u $(whoami) --hp $HOME
 ```
@@ -78,7 +78,6 @@ After=network.target
 Type=simple
 WorkingDirectory=/opt/whatsapp-mkauth
 Environment=NODE_ENV=production
-Environment=PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 EnvironmentFile=/opt/whatsapp-mkauth/.env
 ExecStart=/usr/bin/node /opt/whatsapp-mkauth/server.js
 Restart=always
@@ -120,6 +119,15 @@ Se `AUTH_ACCOUNT` e `AUTH_PASSWORD` estiverem definidos, a API exige Basic Auth:
 - Header: `Authorization: Basic base64(conta:senha)`
 - Alternativas aceitas: enviar `conta`/`senha` em header, body ou query.
 
+### Autodetecção do navegador
+O servidor detecta automaticamente o binário do navegador nesta ordem:
+1. `PUPPETEER_EXECUTABLE_PATH` (se definido)
+2. `/usr/bin/chromium` ou `/usr/bin/chromium-browser`
+3. `/usr/bin/google-chrome` ou `/usr/bin/google-chrome-stable`
+4. Binário baixado pelo pacote `puppeteer` (se instalado)
+
+Na maioria dos casos você NÃO precisa definir `PUPPETEER_EXECUTABLE_PATH`.
+
 ### Exemplos rápidos (curl)
 Status/QR:
 ```bash
@@ -160,8 +168,9 @@ curl "http://127.0.0.1:3000/check-number?to=5591999998888"
 Formato: JSONL (um JSON por linha) com `timestamp` e payload relacionado.
 
 ### Observações e Dicas
-- Se o QR não aparecer: confirme `PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium` e dependências instaladas.
+- Se o QR não aparecer: verifique rede/horário do sistema e dependências (`libgbm1 libnss3 libxss1 libasound2`).
+- Em distros antigas (ex.: Debian 10 com Chromium 90), instale o Google Chrome estável e reinicie.
 - Não apague `./.wwebjs_auth`; isso mantém a sessão autenticada.
-- Para atualizar: `git pull && npm ci --only=production` e reinicie o serviço.
+- Para atualizar: `git pull && npm ci --only=production` e reinicie o serviço (PM2 ou systemd).
 - Segurança: exponha a API apenas em redes confiáveis e use Basic Auth.
 

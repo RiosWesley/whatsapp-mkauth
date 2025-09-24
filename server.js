@@ -11,14 +11,15 @@ const path = require('path');
 
 // Configuration
 const app = express();
+const MAX_BODY_SIZE = process.env.MAX_BODY_SIZE || '100mb';
 const upload = multer({ storage: multer.memoryStorage() });
 const PORT = process.env.PORT || 3000;
 const AUTH_ACCOUNT = process.env.AUTH_ACCOUNT || process.env.MK_AUTH_ACCOUNT || process.env.CONTA || '';
 const AUTH_PASSWORD = process.env.AUTH_PASSWORD || process.env.MK_AUTH_PASSWORD || process.env.SENHA || '';
 
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: MAX_BODY_SIZE }));
+app.use(express.urlencoded({ extended: true, limit: MAX_BODY_SIZE }));
 app.use(morgan('dev'));
 
 // WhatsApp client state
