@@ -1,4 +1,4 @@
-## Colbranca Zap API (whatsapp-web.js)
+## Cobranca Zap API (whatsapp-web.js)
 
 Endpoints principais (POST):
 
