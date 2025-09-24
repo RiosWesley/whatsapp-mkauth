@@ -23,7 +23,7 @@ apt -y install nodejs
 
 # Clone e instale dependências do projeto
 cd /opt
-git clone https://SEU_GIT_HOST/SEU_USUARIO/whatsapp-mkauth.git
+git clone https://github.com/RiosWesley/whatsapp-mkauth.git
 cd whatsapp-mkauth
 npm ci --only=production
 ```
