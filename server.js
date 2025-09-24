@@ -26,12 +26,36 @@ let clientStatus = 'initializing'; // initializing | qr | ready | disconnected
 let lastQrText = null;
 const messageStatusMap = new Map(); // messageId -> { ack, to, type, createdAt }
 
+// Descobre caminho do Chromium automaticamente se não vier por env
+function resolveChromiumPath() {
+    const envPath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    if (envPath && fs.existsSync(envPath)) return envPath;
+    const candidates = [
+        '/usr/bin/chromium',
+        '/usr/bin/chromium-browser',
+        '/snap/bin/chromium',
+        '/usr/bin/google-chrome',
+        '/usr/bin/google-chrome-stable'
+    ];
+    for (const p of candidates) {
+        try { if (fs.existsSync(p)) return p; } catch (_) {}
+    }
+    return undefined; // deixa o puppeteer decidir (pode falhar se não houver bundle)
+}
+
+const chromiumPath = resolveChromiumPath();
+if (!chromiumPath) {
+    console.warn('[whatsapp] Chromium não encontrado automaticamente. Defina PUPPETEER_EXECUTABLE_PATH.');
+} else {
+    console.log(`[whatsapp] Usando Chromium em: ${chromiumPath}`);
+}
+
 // Initialize WhatsApp client with persistent auth
 const client = new Client({
 	authStrategy: new LocalAuth({ dataPath: './.wwebjs_auth' }),
 	puppeteer: {
 		headless: true,
-		executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+		executablePath: chromiumPath,
 		args: [
 			'--no-sandbox',
 			'--disable-setuid-sandbox',
