@@ -31,13 +31,15 @@ const client = new Client({
 	authStrategy: new LocalAuth({ dataPath: './.wwebjs_auth' }),
 	puppeteer: {
 		headless: true,
+		executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
 		args: [
 			'--no-sandbox',
 			'--disable-setuid-sandbox',
 			'--disable-dev-shm-usage',
 			'--no-first-run',
 			'--no-zygote',
-			'--disable-gpu'
+			'--disable-gpu',
+			'--single-process'
 		]
 	}
 });
@@ -61,6 +63,14 @@ client.on('authenticated', () => {
 client.on('auth_failure', (msg) => {
 	clientStatus = 'disconnected';
 	console.error('[whatsapp] Falha de autenticação:', msg);
+});
+
+client.on('loading_screen', (percent, message) => {
+    console.log(`[whatsapp] Carregando ${percent}% - ${message}`);
+});
+
+client.on('change_state', (state) => {
+    console.log('[whatsapp] Estado:', state);
 });
 
 client.on('disconnected', (reason) => {
@@ -87,7 +97,17 @@ client.on('message_ack', (msg, ack) => {
     } catch (_) {}
 });
 
-client.initialize();
+console.log('[whatsapp] Inicializando cliente WhatsApp...');
+client.initialize().catch((e) => {
+    console.error('[whatsapp] Erro ao inicializar:', e);
+});
+
+// Watchdog: alerta se demorar demais
+setTimeout(() => {
+    if (clientStatus === 'initializing') {
+        console.warn('[whatsapp] Ainda inicializando após 60s. Verifique Chromium e rede.');
+    }
+}, 60000);
 
 // Helpers
 function normalizePhoneToWhatsAppId(rawPhone) {
