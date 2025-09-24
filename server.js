@@ -29,7 +29,17 @@ const messageStatusMap = new Map(); // messageId -> { ack, to, type, createdAt }
 // Initialize WhatsApp client with persistent auth
 const client = new Client({
 	authStrategy: new LocalAuth({ dataPath: './.wwebjs_auth' }),
-	puppeteer: { headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] }
+	puppeteer: {
+		headless: true,
+		args: [
+			'--no-sandbox',
+			'--disable-setuid-sandbox',
+			'--disable-dev-shm-usage',
+			'--no-first-run',
+			'--no-zygote',
+			'--disable-gpu'
+		]
+	}
 });
 
 client.on('qr', (qr) => {
@@ -54,10 +64,13 @@ client.on('auth_failure', (msg) => {
 });
 
 client.on('disconnected', (reason) => {
-	clientStatus = 'disconnected';
-	console.error('[whatsapp] Desconectado:', reason);
-	// Opcional: tentar reiniciar
-	setTimeout(() => client.initialize().catch(() => {}), 5000);
+    clientStatus = 'disconnected';
+    console.error('[whatsapp] Desconectado:', reason);
+    // Reinicializa com limpeza para evitar dupla injeção no mesmo Page
+    setTimeout(async () => {
+        try { await client.destroy(); } catch (_) {}
+        try { await client.initialize(); } catch (_) {}
+    }, 5000);
 });
 
 // Loga ACKs de mensagens enviadas
@@ -317,3 +330,12 @@ app.listen(PORT, () => {
 });
 
 
+// Encerramento limpo
+process.on('SIGINT', async () => {
+    try { await client.destroy(); } catch (_) {}
+    process.exit(0);
+});
+process.on('SIGTERM', async () => {
+    try { await client.destroy(); } catch (_) {}
+    process.exit(0);
+});
