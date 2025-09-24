@@ -183,6 +183,41 @@ async function bufferFromUrl(fileUrl) {
 	return Buffer.from(response.data);
 }
 
+function isProbablyBase64(str) {
+    if (!str || typeof str !== 'string') return false;
+    if (str.startsWith('data:') && str.includes('base64,')) return true;
+    // remove whitespace
+    const s = str.replace(/\s/g, '');
+    if (s.length < 16) return false;
+    if (s.startsWith('http://') || s.startsWith('https://')) return false;
+    // base64 charset check
+    if (!/^[A-Za-z0-9+/]+=*$/.test(s)) return false;
+    // padding check
+    if (s.length % 4 !== 0) return false;
+    try { Buffer.from(s, 'base64'); return true; } catch (_) { return false; }
+}
+
+function bufferFromBase64String(str) {
+    if (str.startsWith('data:')) {
+        const idx = str.indexOf('base64,');
+        const b64 = idx >= 0 ? str.slice(idx + 'base64,'.length) : str;
+        return Buffer.from(b64, 'base64');
+    }
+    return Buffer.from(str.replace(/\s/g, ''), 'base64');
+}
+
+async function bufferFromSource(source) {
+    if (!source) return null;
+    if (typeof source !== 'string') return null;
+    if (source.startsWith('http://') || source.startsWith('https://')) {
+        return await bufferFromUrl(source);
+    }
+    if (isProbablyBase64(source)) {
+        return bufferFromBase64String(source);
+    }
+    return null;
+}
+
 function readBasicAuth(req) {
     const header = req.headers['authorization'];
     if (!header || !header.startsWith('Basic ')) return { account: null, password: null };
@@ -302,14 +337,17 @@ app.post('/send-image', checkMkAuth, upload.any(), async (req, res) => {
             mediaBuffer = fileImage.buffer;
             mimeType = fileImage.mimetype || mimeType;
             filename = fileImage.originalname || filename;
-        } else if (getField(req.body || {}, ['image', 'url', 'link'])) {
-            const url = getField(req.body || {}, ['image', 'url', 'link']);
-            mediaBuffer = await bufferFromUrl(url);
+        } else {
+            const src = getField(req.body || {}, ['image', 'url', 'link', 'base64', 'imageBase64', 'fileBase64']);
+            if (src) {
+                mediaBuffer = await bufferFromSource(src);
+                if (!mediaBuffer) return res.status(400).json({ success: false, error: 'invalid_image_source' });
+            } else {
+                return res.status(400).json({ success: false, error: 'file_or_url_required' });
+            }
             filename = getField(req.body || {}, ['filename', 'nome', 'nome_arquivo'], filename);
             mimeType = getField(req.body || {}, ['mimetype', 'contentType', 'tipo'], mimeType);
-		} else {
-			return res.status(400).json({ success: false, error: 'file_or_url_required' });
-		}
+        }
 
 		const media = new MessageMedia(mimeType, mediaBuffer.toString('base64'), filename);
         const caption = getField(req.body || {}, ['caption', 'legenda', 'descricao'], '');
@@ -345,12 +383,15 @@ app.post('/send-document', checkMkAuth, upload.any(), async (req, res) => {
             mediaBuffer = fileDoc.buffer;
             mimeType = fileDoc.mimetype || mimeType;
             filename = fileDoc.originalname || filename;
-        } else if (getField(req.body || {}, ['document', 'url', 'link'])) {
-            const url = getField(req.body || {}, ['document', 'url', 'link']);
-            mediaBuffer = await bufferFromUrl(url);
-		} else {
-			return res.status(400).json({ success: false, error: 'file_or_url_required' });
-		}
+        } else {
+            const src = getField(req.body || {}, ['document', 'url', 'link', 'base64', 'documentBase64', 'fileBase64']);
+            if (src) {
+                mediaBuffer = await bufferFromSource(src);
+                if (!mediaBuffer) return res.status(400).json({ success: false, error: 'invalid_document_source' });
+            } else {
+                return res.status(400).json({ success: false, error: 'file_or_url_required' });
+            }
+        }
 
 		const media = new MessageMedia(mimeType, mediaBuffer.toString('base64'), filename);
         const caption = getField(req.body || {}, ['caption', 'legenda', 'descricao'], '');
