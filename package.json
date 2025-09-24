@@ -1,5 +1,5 @@
 {
-  "name": "colbranca-zap",
+  "name": "cobranca-zap",
   "version": "1.0.0",
   "description": "Servidor Express com whatsapp-web.js para envio de mensagens, imagens e documentos.",
   "main": "server.js",

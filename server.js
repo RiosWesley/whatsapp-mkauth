@@ -287,7 +287,7 @@ app.post('/send-document', checkMkAuth, upload.any(), async (req, res) => {
 
 // Health
 app.get('/', (req, res) => {
-	res.json({ ok: true, service: 'colbranca-zap', status: clientStatus });
+	res.json({ ok: true, service: 'cobranca-zap', status: clientStatus });
 });
 
 // Consulta simples do status de uma mensagem enviada
