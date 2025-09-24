@@ -40,6 +40,13 @@ function resolveChromiumPath() {
     for (const p of candidates) {
         try { if (fs.existsSync(p)) return p; } catch (_) {}
     }
+    // tenta usar o Chromium baixado pelo pacote puppeteer, se existir
+    try {
+        // eslint-disable-next-line import/no-extraneous-dependencies, global-require
+        const puppeteer = require('puppeteer');
+        const p = puppeteer.executablePath();
+        if (p && fs.existsSync(p)) return p;
+    } catch (_) {}
     return undefined; // deixa o puppeteer decidir (pode falhar se não houver bundle)
 }
 
@@ -63,7 +70,11 @@ const client = new Client({
 			'--no-first-run',
 			'--no-zygote',
 			'--disable-gpu',
-			'--single-process'
+			'--disable-features=TranslateUI,site-per-process,IsolateOrigins',
+			'--no-default-browser-check',
+			'--disable-background-timer-throttling',
+			'--disable-backgrounding-occluded-windows',
+			'--disable-renderer-backgrounding'
 		]
 	}
 });
@@ -121,17 +132,28 @@ client.on('message_ack', (msg, ack) => {
     } catch (_) {}
 });
 
-console.log('[whatsapp] Inicializando cliente WhatsApp...');
-client.initialize().catch((e) => {
-    console.error('[whatsapp] Erro ao inicializar:', e);
-});
+let isInitializing = false;
+async function startClient() {
+    if (isInitializing) return;
+    isInitializing = true;
+    console.log('[whatsapp] Inicializando cliente WhatsApp...');
+    try {
+        await client.initialize();
+    } catch (e) {
+        console.error('[whatsapp] Erro ao inicializar:', e);
+        isInitializing = false;
+        setTimeout(startClient, 5000);
+    }
+}
 
 // Watchdog: alerta se demorar demais
-setTimeout(() => {
+setInterval(() => {
     if (clientStatus === 'initializing') {
-        console.warn('[whatsapp] Ainda inicializando após 60s. Verifique Chromium e rede.');
+        console.warn('[whatsapp] Ainda inicializando. Verifique Chromium e rede.');
     }
 }, 60000);
+
+startClient();
 
 // Helpers
 function normalizePhoneToWhatsAppId(rawPhone) {
